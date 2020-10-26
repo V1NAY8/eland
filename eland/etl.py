@@ -23,6 +23,8 @@ import pandas as pd  # type: ignore
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import parallel_bulk
 from pandas.io.parsers import _c_parser_defaults  # type: ignore
+from tqdm.notebook import tqdm
+from pandas.core.config_init import is_terminal
 
 from eland import DataFrame
 from eland.common import DEFAULT_CHUNK_SIZE, ensure_es_client
@@ -40,6 +42,7 @@ def pandas_to_eland(
     thread_count: int = 4,
     chunksize: Optional[int] = None,
     use_pandas_index_for_es_ids: bool = True,
+    show_progressbar: Optional[bool] = None,
 ) -> DataFrame:
     """
     Append a pandas DataFrame to an Elasticsearch index.
@@ -73,6 +76,10 @@ def pandas_to_eland(
     use_pandas_index_for_es_ids: bool, default 'True'
         * True: pandas.DataFrame.index fields will be used to populate Elasticsearch '_id' fields.
         * False: Ignore pandas.DataFrame.index when indexing into Elasticsearch
+    show_progressbar: Optional[bool], default 'None'
+        * True : show a progress bar only if we detect Jupyter Notebook (for now)
+        * False : don't show a progress bar
+        * None : show a progress bar only if we detect Jupyter Notebook 
 
     Returns
     -------
@@ -178,27 +185,43 @@ def pandas_to_eland(
     else:
         es_client.indices.create(index=es_dest_index, body=mapping)
 
+    if show_progressbar is None or show_progressbar is True:
+        # Detect jupyter notebook
+        show_progressbar = False if is_terminal() else True
+
     def action_generator(
         pd_df: pd.DataFrame,
         es_dropna: bool,
         use_pandas_index_for_es_ids: bool,
         es_dest_index: str,
+        show_progressbar: bool,
     ) -> Generator[Dict[str, Any], None, None]:
-        for row in pd_df.iterrows():
-            if es_dropna:
-                values = row[1].dropna().to_dict()
-            else:
-                values = row[1].to_dict()
 
-            if use_pandas_index_for_es_ids:
-                # Use index as _id
-                id = row[0]
+        with tqdm(
+            total=pd_df.shape[0],
+            disable=not show_progressbar,
+            desc="Progress",
+        ) as progress_bar:
+            for row in pd_df.iterrows():
+                if es_dropna:
+                    values = row[1].dropna().to_dict()
+                else:
+                    values = row[1].to_dict()
 
-                action = {"_index": es_dest_index, "_source": values, "_id": str(id)}
-            else:
-                action = {"_index": es_dest_index, "_source": values}
+                if use_pandas_index_for_es_ids:
+                    # Use index as _id
+                    id = row[0]
 
-            yield action
+                    action = {
+                        "_index": es_dest_index,
+                        "_source": values,
+                        "_id": str(id),
+                    }
+                else:
+                    action = {"_index": es_dest_index, "_source": values}
+
+                progress_bar.update(1)
+                yield action
 
     # parallel_bulk is lazy generator so use deque to consume them immediately
     # maxlen = 0 because don't need results of parallel_bulk
@@ -206,7 +229,11 @@ def pandas_to_eland(
         parallel_bulk(
             client=es_client,
             actions=action_generator(
-                pd_df, es_dropna, use_pandas_index_for_es_ids, es_dest_index
+                pd_df,
+                es_dropna,
+                use_pandas_index_for_es_ids,
+                es_dest_index,
+                show_progressbar,
             ),
             thread_count=thread_count,
             chunk_size=int(chunksize / thread_count),
