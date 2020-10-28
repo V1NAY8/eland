@@ -22,9 +22,9 @@ from typing import Any, Dict, Generator, List, Mapping, Optional, Tuple, Union
 import pandas as pd  # type: ignore
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import parallel_bulk
+from pandas.core.config_init import is_terminal  # type: ignore
 from pandas.io.parsers import _c_parser_defaults  # type: ignore
-from tqdm.notebook import tqdm
-from pandas.core.config_init import is_terminal
+from tqdm.notebook import tqdm  # type: ignore
 
 from eland import DataFrame
 from eland.common import DEFAULT_CHUNK_SIZE, ensure_es_client
@@ -79,7 +79,7 @@ def pandas_to_eland(
     show_progressbar: Optional[bool], default 'None'
         * True : show a progress bar only if we detect Jupyter Notebook (for now)
         * False : don't show a progress bar
-        * None : show a progress bar only if we detect Jupyter Notebook 
+        * None : show a progress bar only if we detect Jupyter Notebook
 
     Returns
     -------
