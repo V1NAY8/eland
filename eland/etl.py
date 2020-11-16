@@ -187,7 +187,7 @@ def pandas_to_eland(
     if show_progressbar is None or show_progressbar is True:
         # Detect jupyter notebook
         try:
-            from IPython import get_ipython
+            from IPython import get_ipython # type: ignore
 
             ip = get_ipython()
             if hasattr(ip, "kernel"):
@@ -200,7 +200,7 @@ def pandas_to_eland(
         es_dropna: bool,
         use_pandas_index_for_es_ids: bool,
         es_dest_index: str,
-        show_progressbar: bool,
+        show_progressbar: Optional[bool],
     ) -> Generator[Dict[str, Any], None, None]:
 
         with tqdm(
