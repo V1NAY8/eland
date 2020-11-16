@@ -187,7 +187,7 @@ def pandas_to_eland(
     if show_progressbar is None or show_progressbar is True:
         # Detect jupyter notebook
         try:
-            from IPython import get_ipython # type: ignore
+            from IPython import get_ipython  # type: ignore
 
             ip = get_ipython()
             if hasattr(ip, "kernel"):
