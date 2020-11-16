@@ -22,7 +22,6 @@ from typing import Any, Dict, Generator, List, Mapping, Optional, Tuple, Union
 import pandas as pd  # type: ignore
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import parallel_bulk
-from pandas.core.config_init import is_terminal  # type: ignore
 from pandas.io.parsers import _c_parser_defaults  # type: ignore
 from tqdm.notebook import tqdm  # type: ignore
 
@@ -187,7 +186,14 @@ def pandas_to_eland(
 
     if show_progressbar is None or show_progressbar is True:
         # Detect jupyter notebook
-        show_progressbar = False if is_terminal() else True
+        try:
+            from IPython import get_ipython
+
+            ip = get_ipython()
+            if hasattr(ip, "kernel"):
+                show_progressbar = True
+        except ImportError:
+            show_progressbar = False
 
     def action_generator(
         pd_df: pd.DataFrame,
@@ -229,11 +235,11 @@ def pandas_to_eland(
         parallel_bulk(
             client=es_client,
             actions=action_generator(
-                pd_df,
-                es_dropna,
-                use_pandas_index_for_es_ids,
-                es_dest_index,
-                show_progressbar,
+                pd_df=pd_df,
+                es_dropna=es_dropna,
+                use_pandas_index_for_es_ids=use_pandas_index_for_es_ids,
+                es_dest_index=es_dest_index,
+                show_progressbar=show_progressbar,
             ),
             thread_count=thread_count,
             chunk_size=int(chunksize / thread_count),
