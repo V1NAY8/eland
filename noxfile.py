@@ -75,7 +75,6 @@ def lint(session):
         process = subprocess.run(
             ["mypy", "--strict", typed_file],
             env=session.env,
-            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )

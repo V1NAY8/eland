@@ -155,7 +155,7 @@ class Query:
         def construct_sort(column: str, order: str) -> Dict[str, Dict[str, str]]:
             return {column: {"order": order}}
 
-        top_hits = {}
+        top_hits: Any = {}
         if sort_order:
             top_hits["sort"] = [construct_sort(i, sort_order) for i in source_columns]
         if source_columns:
