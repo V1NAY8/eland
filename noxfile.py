@@ -73,9 +73,9 @@ def lint(session):
         if not os.path.isfile(typed_file):
             session.error(f"The file {typed_file!r} couldn't be found")
         process = subprocess.run(
-            f"mypy --strict {typed_file}",
+            ["mypy", "--strict", typed_file],
             env=session.env,
-            text=True,
+            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
@@ -83,7 +83,7 @@ def lint(session):
         assert process.returncode in (0, 1)
 
         errors = []
-        for line in process.stdout.split("\n"):
+        for line in process.stdout.decode().split("\n"):
             filepath = line.partition(":")[0]
             if filepath in TYPED_FILES:
                 errors.append(line)
